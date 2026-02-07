@@ -1,0 +1,17 @@
+[package]
+name = "authentication_server"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+actix-web = "4.12.1"
+base64 = "0.22.1"
+bcrypt = "0.18.0"
+dotenv = "0.15.0"
+hmac = "0.12.1"
+serde = "1.0.228"
+serde_derive = "1.0.228"
+serde_json = "1.0.149"
+sha = "1.0.3"
+sha2 = "0.10.9"
+tokio = "1.49.0"
