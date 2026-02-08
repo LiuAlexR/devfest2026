@@ -27,5 +27,4 @@ pub struct JWTModel {
     pub exp: u128,
     pub user: i32,
     pub pass: bool,
-    pub twofa: bool,
 }

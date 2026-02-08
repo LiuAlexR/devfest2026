@@ -103,6 +103,7 @@ pub fn verify_jwt_signature(token: &str) -> Result<i32, JWTError> {
     }
     return Ok(request.user);
 }
+/// Parses the JWT to see the current login state. Returns 0 if the user is not logged in, 1 if the JWT shows that the password is valid
 pub fn parse_jwt_signature(token: &str) -> Result<u8, JWTError> { 
     let mut split_token = token.split(".");
     let _head = match split_token.next() {
@@ -131,11 +132,16 @@ pub fn parse_jwt_signature(token: &str) -> Result<u8, JWTError> {
             
     };
     if request.pass {
-        if request.twofa {
-            return Ok(2);
-        }
         return Ok(1);
     }
     return Ok(0);
     
+}
+pub fn generate_jwt_based_on_state(user_id: i32, is_password_correct: bool) -> Result<String, JWTError> {
+    // let secret =  "a-string-secret-at-least-256-bits-long";
+    let header = "{\"alg\":\"HS256\",\"typ\":\"JWT\"}";
+    let current_time = SystemTime::now();
+    let ms_since_epoch = current_time.duration_since(UNIX_EPOCH).expect("Time should go forward!").as_millis() + 1800000;
+    let body = format!("{{\"exp\":{},\"user\":{},\"pass\":{}}}", ms_since_epoch, user_id, is_password_correct);
+    return create_jwt(&header, &body);
 }
