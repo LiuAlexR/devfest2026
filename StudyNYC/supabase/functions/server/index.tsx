@@ -74,33 +74,25 @@ app.post("/make-server-386acec3/signup", async (c) => {
   }
 });
 
-// Get all study spots with pagination and filtering
 app.get("/make-server-386acec3/spots", async (c) => {
   try {
     const url = new URL(c.req.url);
     const page = parseInt(url.searchParams.get('page') || '1');
     const limit = parseInt(url.searchParams.get('limit') || '50');
     const search = url.searchParams.get('search') || '';
-    const category = url.searchParams.get('category') || 'all';
+    const selectedCategory = url.searchParams.get('category') || 'all'; 
     const sortBy = url.searchParams.get('sortBy') || 'none';
     const userLat = parseFloat(url.searchParams.get('userLat') || '0');
     const userLon = parseFloat(url.searchParams.get('userLon') || '0');
     
-    // Use direct Supabase query instead of kv.getByPrefix to handle large datasets
     const supabase = getServiceClient();
-    let query = supabase
-      .from('kv_store_386acec3')
-      .select('value', { count: 'exact' })
-      .like('key', 'spot:%');
     
-    // Note: We need to filter and sort after fetching because the values are in JSONB
-    // For better performance with 300k+ records, we should fetch in batches
+    // --- BATCH FETCHING (Keep as is) ---
     const batchSize = 10000;
     let allSpots: any[] = [];
     let fetchedCount = 0;
     let hasMore = true;
     
-    // Fetch all spots in batches (to avoid the 1000 limit)
     while (hasMore) {
       const { data, error } = await supabase
         .from('kv_store_386acec3')
@@ -108,27 +100,20 @@ app.get("/make-server-386acec3/spots", async (c) => {
         .like('key', 'spot:%')
         .range(fetchedCount, fetchedCount + batchSize - 1);
       
-      if (error) {
-        console.log('Database query error:', error);
-        return c.json({ error: `Failed to fetch spots: ${error.message}` }, 500);
-      }
+      if (error) return c.json({ error: `Fetch error: ${error.message}` }, 500);
       
       if (!data || data.length === 0) {
         hasMore = false;
       } else {
         allSpots = allSpots.concat(data.map(d => d.value));
         fetchedCount += data.length;
-        
-        // If we got less than batchSize, we've reached the end
-        if (data.length < batchSize) {
-          hasMore = false;
-        }
+        if (data.length < batchSize) hasMore = false;
       }
     }
     
     let spots = allSpots;
     
-    // Filter by search query
+    // --- 1. SEARCH FILTER ---
     if (search) {
       const query = search.toLowerCase();
       spots = spots.filter((spot: any) => 
@@ -138,12 +123,27 @@ app.get("/make-server-386acec3/spots", async (c) => {
       );
     }
     
-    // Filter by category
-    if (category !== 'all') {
-      spots = spots.filter((spot: any) => spot.category === category);
+    // --- 2. CATEGORY FILTER (The Fix) ---
+    if (selectedCategory !== 'all') {
+      // Map UI plurals to DB singulars
+      const normalizationMap: Record<string, string> = {
+        'libraries': 'library',
+        'cafes': 'cafe',
+        'restaurants': 'restaurant',
+        'parks': 'park',
+        'coworking': 'coworking'
+      };
+
+      const target = normalizationMap[selectedCategory] || selectedCategory;
+
+      spots = spots.filter((spot: any) => {
+        // Ensure we are checking the 'category' field specifically
+        const spotCat = (spot.category || '').toLowerCase();
+        return spotCat === target.toLowerCase();
+      });
     }
     
-    // Sort spots
+    // --- 3. SORTING ---
     if (sortBy === 'distance' && userLat && userLon) {
       spots = spots.filter((spot: any) => spot.latitude && spot.longitude);
       spots.sort((a: any, b: any) => {
@@ -151,13 +151,9 @@ app.get("/make-server-386acec3/spots", async (c) => {
         const distB = calculateDistance(userLat, userLon, b.latitude, b.longitude);
         return distA - distB;
       });
-    } else if (sortBy === 'rating') {
-      // We'll need to fetch ratings for sorting - for now, skip or do client-side
-      // This is expensive for 300k spots, so we might want to cache ratings in spot objects
     }
     
     const total = spots.length;
-    const totalPages = Math.ceil(total / limit);
     const offset = (page - 1) * limit;
     const paginatedSpots = spots.slice(offset, offset + limit);
     
@@ -165,12 +161,11 @@ app.get("/make-server-386acec3/spots", async (c) => {
       spots: paginatedSpots, 
       total,
       page,
-      totalPages,
+      totalPages: Math.ceil(total / limit),
       limit
     });
   } catch (error) {
-    console.log('Get spots error:', error);
-    return c.json({ error: `Failed to fetch study spots: ${error}` }, 500);
+    return c.json({ error: `Server error: ${error}` }, 500);
   }
 });
 

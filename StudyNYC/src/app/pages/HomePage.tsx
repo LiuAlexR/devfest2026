@@ -158,77 +158,39 @@ export const HomePage: React.FC = () => {
   };
 
   const fetchSpots = async (currentPage: number, reset: boolean = false) => {
-    try {
-      setLoadingMore(true);
-      
-      // Build query params
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: '50',
-        search: debouncedSearch,
-        category: filterCategory,
-        sortBy: sortBy,
-      });
-      
-      if (userLocation) {
-        params.append('userLat', userLocation.latitude.toString());
-        params.append('userLon', userLocation.longitude.toString());
-      }
-      
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-386acec3/spots?${params.toString()}`,
-        {
-          headers: {
-            'Authorization': `Bearer ${publicAnonKey}`,
-          },
-        }
-      );
+  try {
+    if (reset) setLoading(true);
+    setLoadingMore(!reset);
+    
+    const params = new URLSearchParams({
+      page: currentPage.toString(),
+      limit: '20', 
+      search: debouncedSearch,
+      category: filterCategory,
+      sortBy: sortBy,
+    });
+    
+    // ... (userLocation logic)
 
-      const data = await response.json();
-      if (response.ok) {
-        if (reset) {
-          setSpots(data.spots || []);
-        } else {
-          setSpots((prevSpots) => [...prevSpots, ...(data.spots || [])]);
-        }
-        
-        // Fetch reviews for all spots
-        const reviewPromises = (data.spots || []).map(async (spot: StudySpot) => {
-          const reviewResponse = await fetch(
-            `https://${projectId}.supabase.co/functions/v1/make-server-386acec3/spots/${spot.id}/reviews`,
-            {
-              headers: {
-                'Authorization': `Bearer ${publicAnonKey}`,
-              },
-            }
-          );
-          const reviewData = await reviewResponse.json();
-          const reviews = reviewData.reviews || [];
-          const avg = reviews.length > 0
-            ? reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / reviews.length
-            : 0;
-          return { spotId: spot.id, avg, count: reviews.length };
-        });
+    const response = await fetch(
+      `https://${projectId}.supabase.co/functions/v1/make-server-386acec3/spots?${params.toString()}`,
+      { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }
+    );
 
-        const reviewResults = await Promise.all(reviewPromises);
-        const reviewMap: Record<string, { avg: number; count: number }> = {};
-        reviewResults.forEach(({ spotId, avg, count }) => {
-          reviewMap[spotId] = { avg, count };
-        });
-        setReviewData(reviewMap);
-
-        setTotal(data.total || 0);
-        setTotalPages(data.totalPages || 1);
-      } else {
-        console.error('Failed to fetch spots:', data.error);
-      }
-    } catch (error) {
-      console.error('Error fetching spots:', error);
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
+    const data = await response.json();
+    if (response.ok) {
+      // We just set the spots. The ratings are ALREADY inside data.spots!
+      setSpots((prev) => reset ? data.spots : [...prev, ...data.spots]);
+      setTotal(data.total || 0);
+      setTotalPages(data.totalPages || 1);
     }
-  };
+  } catch (error) {
+    console.error('Fetch error:', error);
+  } finally {
+    setLoading(false);
+    setLoadingMore(false);
+  }
+};
 
   const loadMoreSpots = () => {
     setPage((prevPage) => prevPage + 1);
@@ -317,19 +279,27 @@ export const HomePage: React.FC = () => {
             )
             }
             
-            <Select value={filterCategory} onValueChange={setFilterCategory}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Filter by type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="libraries">Libraries</SelectItem>
-                <SelectItem value="cafes">Cafes</SelectItem>
-                <SelectItem value="restaurants">Restaurants</SelectItem>
-                <SelectItem value="parks">Parks</SelectItem>
-                <SelectItem value="coworking">Co-working</SelectItem>
-              </SelectContent>
-            </Select>
+            <Select 
+  value={filterCategory} 
+  onValueChange={(value) => {
+    setFilterCategory(value);
+    setPage(1);      // Reset to first page for the new filter
+    setSpots([]);    // Clear current results so the user sees the loading state
+  }}
+>
+  <SelectTrigger className="w-[180px]">
+    <SelectValue placeholder="Filter by type" />
+  </SelectTrigger>
+  <SelectContent>
+    {/* Ensure these values MATCH your database strings exactly (e.g., 'cafes' vs 'Cafes') */}
+    <SelectItem value="all">All Types</SelectItem>
+    <SelectItem value="libraries">Libraries</SelectItem>
+    <SelectItem value="cafes">Cafes</SelectItem>
+    <SelectItem value="restaurants">Restaurants</SelectItem>
+    <SelectItem value="parks">Parks</SelectItem>
+    <SelectItem value="coworking">Co-working</SelectItem>
+  </SelectContent>
+</Select>
 
             <Select value={sortBy} onValueChange={(value) => setSortBy(value as 'none' | 'distance' | 'rating')}>
               <SelectTrigger className="w-[180px]">
@@ -364,14 +334,15 @@ export const HomePage: React.FC = () => {
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {spots.map((spot) => (
-                <StudySpotCard
-                  key={spot.id}
-                  spot={spot}
-                  averageRating={reviewData[spot.id]?.avg}
-                  reviewCount={reviewData[spot.id]?.count}
-                  distance={getDistance(spot)}
-                />
-              ))}
+  <StudySpotCard
+    key={spot.id}
+    spot={spot}
+    // Pulling pre-calculated data from the spot object
+    averageRating={spot.avg_rating || 0}
+    reviewCount={spot.review_count || 0}
+    distance={getDistance(spot)}
+  />
+))}
             </div>
 
             {loadingMore && (
