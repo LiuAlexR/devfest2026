@@ -21,7 +21,7 @@ export const Header: React.FC = () => {
         <div className="flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 text-xl font-bold text-gray-900">
             <BookOpen className="w-6 h-6" />
-            NYC Study Spots
+            StudyNYC
           </Link>
 
           <nav className="flex items-center gap-4">
