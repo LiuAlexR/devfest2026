@@ -133,10 +133,15 @@ app.get("/make-server-386acec3/spots/:spotId", async (c: any) => {
     .from('kv_store_386acec3')
     .select('*')
     .eq('key', spotId)
-    .single();
+    .maybeSingle();
 
-  if (error || !data) {
-    console.error("Supabase error or no data:", error);
+  if (error) {
+    console.error("Supabase error:", error);
+    return c.json({ error: "Database lookup failed" }, 500);
+  }
+  
+  if (!data) {
+    console.warn("Spot not found with key:", spotId);
     return c.json({ error: "Study spot not found in database" }, 404);
   }
 
@@ -150,10 +155,30 @@ app.get("/make-server-386acec3/spots/:spotId/reviews", async (c: any) => {
   const supabase = getServiceClient();
 
   try {
+    console.log("Looking up reviews for spot:", spotId);
+    // Check if spot exists first
+    const { data: spotData, error: spotError } = await supabase
+      .from('kv_store_386acec3')
+      .select('key')
+      .eq('key', spotId)
+      .maybeSingle();
+
+    if (spotError) {
+      console.error("Spot lookup error:", spotError);
+      return c.json({ reviews: [] }); // Return empty array if spot not found
+    }
+    
+    if (!spotData) {
+      console.warn("No spot found with key:", spotId);
+      return c.json({ reviews: [] }); // Return empty array if spot not found
+    }
+
+    const actualSpotId = spotId;
+
     const { data, error } = await supabase
       .from('reviews_386acec3')
       .select('*')
-      .eq('spot_id', spotId)
+      .eq('spot_id', actualSpotId)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -193,9 +218,28 @@ app.post("/make-server-386acec3/spots/:spotId/reviews", async (c: any) => {
       return c.json({ error: 'Invalid rating. Must be between 1 and 5' }, 400);
     }
 
+    // Check if spot exists first
+    const { data: spotData, error: spotError } = await supabase
+      .from('kv_store_386acec3')
+      .select('key')
+      .eq('key', spotId)
+      .maybeSingle();
+
+    if (spotError) {
+      console.error("Spot lookup error:", spotError);
+      return c.json({ error: `Spot lookup failed: ${spotError.message}` }, 500);
+    }
+    
+    if (!spotData) {
+      console.warn("No spot found with key:", spotId);
+      return c.json({ error: 'Study spot not found' }, 404);
+    }
+
+    const actualSpotId = spotId;
+
     // Keep userId as null if not provided (no foreign key constraint issue)
     const reviewData: any = {
-      spot_id: spotId,
+      spot_id: actualSpotId,
       user_name: userName || 'User',
       rating: parseInt(rating),
       comment: comment || '',
