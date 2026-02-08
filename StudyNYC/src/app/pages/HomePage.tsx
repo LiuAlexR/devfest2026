@@ -180,8 +180,17 @@ export const HomePage: React.FC = () => {
     });
     console.log('Response status:', response.status);
     
-    const data = await response.json();
-    console.log('Response data:', data);
+    const responseText = await response.text();
+    console.log('Raw response:', responseText);
+    
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('Failed to parse JSON:', parseError, 'Response was:', responseText);
+      throw parseError;
+    }
+    console.log('Parsed response data:', data);
     
     if (response.ok) {
       // We just set the spots. The ratings are ALREADY inside data.spots!

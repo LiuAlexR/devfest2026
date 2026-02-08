@@ -6,7 +6,7 @@ import { ReviewSection } from '../components/ReviewSection';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Card, CardContent } from '../components/ui/card';
-import { Wifi, Zap, MapPin, ArrowLeft, Bookmark, Navigation } from 'lucide-react';
+import { Wifi, Zap, Clock, MapPin, ArrowLeft, Bookmark, Navigation } from 'lucide-react';
 import { toast } from 'sonner';
 import { publicAnonKey, projectId } from '../../../utils/supabase/info';
 import Cookies from 'js-cookie';
@@ -57,7 +57,16 @@ export const SpotDetailPage: React.FC = () => {
     );
 
     console.log('Spot fetch response status:', response.status);
-    const data = await response.json();
+    const responseText = await response.text();
+    console.log('Raw response:', responseText);
+    
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('Failed to parse JSON:', parseError);
+      throw parseError;
+    }
     console.log('Spot fetch data:', data);
     console.log('Response ok?', response.ok);
 
