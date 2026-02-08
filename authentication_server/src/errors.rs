@@ -1,4 +1,7 @@
 use std::fmt;
+
+use serde::Serialize;
+#[derive(Debug, Serialize)]
 pub enum UserError {
     UserAlreadyExistsError,
     UserDoesNotExistError,

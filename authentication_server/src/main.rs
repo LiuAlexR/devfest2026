@@ -27,9 +27,14 @@ fn get_user_id_from_header(req: &HttpRequest) -> Result<i32, String> {
 
 #[post("/register_user")]
 async fn register_user(user_data: Json<User>) -> impl Responder {
+    println!("Trying to register: {}", user_data.username);
     match create_new_user(&user_data.username, &user_data.password).await {
         Ok(id) => HttpResponse::Ok().json(id),
-        Err(_) => HttpResponse::InternalServerError().json("Registration failed"),
+        Err(e) => {
+            // This will print the actual error to your terminal
+            println!("Registration Error: {:?}", e); 
+            HttpResponse::InternalServerError().json(format!("Registration failed: {:?}", e))
+        },
     }
 }
 
