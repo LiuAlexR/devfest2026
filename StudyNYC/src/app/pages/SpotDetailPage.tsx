@@ -27,13 +27,21 @@ export const SpotDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [addingToHistory, setAddingToHistory] = useState(false);
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
+  const [isInHistory, setIsInHistory] = useState(false);
 
   useEffect(() => {
     if (spotId) {
       fetchSpot();
       loadUserLocation();
+      checkIfInHistory();
     }
   }, [spotId]);
+
+  const checkIfInHistory = () => {
+    if (!spotId) return;
+    const history = JSON.parse(localStorage.getItem('spot_history') || '[]');
+    setIsInHistory(history.includes(spotId));
+  };
 
   const loadUserLocation = async () => {
     const location = await getUserLocation();
@@ -90,35 +98,31 @@ export const SpotDetailPage: React.FC = () => {
 };
 
   const handleAddToHistory = async () => {
-    if (!user || !spotId) {
-      toast.error('Please log in to save to history');
+    if (!spotId) {
+      toast.error('No spot selected');
       return;
     }
 
     setAddingToHistory(true);
     try {
-      const authToken = Cookies.get('auth_token');
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-386acec3/user/history`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${authToken}`,
-          },
-          body: JSON.stringify({ spotId }),
-        }
-      );
-
-      const data = await response.json();
-      if (response.ok) {
-        toast.success('Added to your history!');
+      const history = JSON.parse(localStorage.getItem('spot_history') || '[]');
+      
+      if (history.includes(spotId)) {
+        // Remove from history
+        const updatedHistory = history.filter((id: string) => id !== spotId);
+        localStorage.setItem('spot_history', JSON.stringify(updatedHistory));
+        setIsInHistory(false);
+        toast.success('Removed from your history');
       } else {
-        toast.error(data.error || 'Failed to add to history');
+        // Add to history
+        history.unshift(spotId); // Add to beginning
+        localStorage.setItem('spot_history', JSON.stringify(history.slice(0, 100))); // Keep last 100
+        setIsInHistory(true);
+        toast.success('Added to your history!');
       }
     } catch (error) {
-      console.error('Error adding to history:', error);
-      toast.error('Failed to add to history');
+      console.error('Error updating history:', error);
+      toast.error('Failed to update history');
     } finally {
       setAddingToHistory(false);
     }
@@ -259,25 +263,41 @@ export const SpotDetailPage: React.FC = () => {
                       onClick={handleAddToHistory}
                       disabled={addingToHistory}
                       className="w-full"
-                      variant="outline"
+                      variant={isInHistory ? "default" : "outline"}
                     >
-                      <Bookmark className="w-4 h-4 mr-2" />
-                      {addingToHistory ? 'Adding...' : 'Add to My History'}
+                      <Bookmark className={`w-4 h-4 mr-2 ${isInHistory ? 'fill-current' : ''}`} />
+                      {addingToHistory ? 'Updating...' : (isInHistory ? 'Saved to History' : 'Add to My History')}
                     </Button>
                   </CardContent>
                 </Card>
               </>
             ) : (
-              <Card>
-                <CardContent className="pt-6">
-                  <Button
-                    onClick={() => navigate(`/login?redirect=/spot/${spotId}`)}
-                    className="w-full"
-                  >
-                    Sign in to Review
-                  </Button>
-                </CardContent>
-              </Card>
+              <>
+                <Card>
+                  <CardContent className="pt-6">
+                    <Button
+                      onClick={() => navigate(`/login?redirect=/spot/${spotId}`)}
+                      className="w-full"
+                    >
+                      Sign in to Review
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="pt-6">
+                    <Button
+                      onClick={handleAddToHistory}
+                      disabled={addingToHistory}
+                      className="w-full"
+                      variant={isInHistory ? "default" : "outline"}
+                    >
+                      <Bookmark className={`w-4 h-4 mr-2 ${isInHistory ? 'fill-current' : ''}`} />
+                      {addingToHistory ? 'Updating...' : (isInHistory ? 'Saved to History' : 'Add to My History')}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </>
             )}
           </div>
         </div>

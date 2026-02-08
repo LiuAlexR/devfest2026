@@ -29,11 +29,12 @@ export const Header: React.FC = () => {
               <Button variant="ghost">Browse Spots</Button>
             </Link>
             
+            <Link to="/history">
+              <Button variant="ghost">My History</Button>
+            </Link>
+            
             {user ? (
               <>
-                <Link to="/history">
-                  <Button variant="ghost">My History</Button>
-                </Link>
                 <div className="flex items-center gap-3 pl-4 border-l border-gray-200">
                   <div className="flex items-center gap-2">
                     <User className="w-4 h-4 text-gray-600" />

@@ -110,6 +110,28 @@ export const ReviewWritePage: React.FC = () => {
       }
 
       if (response.ok) {
+        // Store review in localStorage with a robust ID
+        const reviewId = data.id || `review_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const spotName = spot?.name || 'Unknown Spot';
+        
+        const review = {
+          id: reviewId,
+          spotId: spotId,
+          spotName: spotName,
+          rating: rating,
+          comment: comment,
+          userName: user?.name || 'User',
+          createdAt: new Date().toISOString(),
+        };
+        
+        console.log('Saving review to localStorage:', review);
+        
+        const reviews = JSON.parse(localStorage.getItem('my_reviews') || '[]');
+        reviews.unshift(review); // Add to beginning
+        localStorage.setItem('my_reviews', JSON.stringify(reviews));
+        
+        console.log('Review saved. Total reviews:', reviews.length);
+        
         toast.success('Review submitted successfully!');
         navigate(`/spot/${spotId}`);
       } else {
