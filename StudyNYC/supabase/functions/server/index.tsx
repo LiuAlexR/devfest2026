@@ -144,4 +144,95 @@ app.get("/make-server-386acec3/spots/:spotId", async (c: any) => {
   return c.json(data);
 });
 
+// --- GET REVIEWS FOR A SPOT ---
+app.get("/make-server-386acec3/spots/:spotId/reviews", async (c: any) => {
+  const spotId = c.req.param('spotId');
+  const supabase = getServiceClient();
+
+  try {
+    const { data, error } = await supabase
+      .from('reviews_386acec3')
+      .select('*')
+      .eq('spot_id', spotId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error("Supabase error:", error);
+      return c.json({ reviews: [] }); // Return empty array if table doesn't exist
+    }
+
+    // Transform data to match Review interface
+    const reviews = (data || []).map((review: any) => ({
+      id: review.id,
+      userId: review.user_id,
+      userName: review.user_name || 'Anonymous',
+      rating: review.rating,
+      comment: review.comment,
+      createdAt: review.created_at,
+    }));
+
+    return c.json({ reviews });
+  } catch (error) {
+    console.error("Error fetching reviews:", error);
+    return c.json({ reviews: [] });
+  }
+});
+
+// --- POST A REVIEW ---
+app.post("/make-server-386acec3/spots/:spotId/reviews", async (c: any) => {
+  const spotId = c.req.param('spotId');
+  const supabase = getServiceClient();
+  
+  try {
+    const body = await c.req.json();
+    let { rating, comment, userName, userId } = body;
+
+    console.log('Creating review:', { spotId, userId, userName, rating, comment: comment?.substring(0, 30) });
+
+    if (!rating || rating < 1 || rating > 5) {
+      return c.json({ error: 'Invalid rating. Must be between 1 and 5' }, 400);
+    }
+
+    // Keep userId as null if not provided (no foreign key constraint issue)
+    const reviewData: any = {
+      spot_id: spotId,
+      user_name: userName || 'User',
+      rating: parseInt(rating),
+      comment: comment || '',
+      created_at: new Date().toISOString(),
+    };
+
+    // Only add user_id if it's a valid value
+    if (userId && userId !== 'anonymous') {
+      reviewData.user_id = userId;
+    }
+
+    const { data, error } = await supabase
+      .from('reviews_386acec3')
+      .insert(reviewData)
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Supabase insert error:", error);
+      return c.json({ error: `Database error: ${error.message}` }, 500);
+    }
+
+    console.log('Review created successfully:', data.id);
+
+    return c.json({
+      id: data.id,
+      userId: data.user_id || null,
+      userName: data.user_name,
+      rating: data.rating,
+      comment: data.comment,
+      createdAt: data.created_at,
+    });
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("Review error:", errorMessage);
+    return c.json({ error: `Server error: ${errorMessage}` }, 500);
+  }
+});
+
 Deno.serve(app.fetch);

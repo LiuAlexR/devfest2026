@@ -6,7 +6,7 @@ import { ReviewSection } from '../components/ReviewSection';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Card, CardContent } from '../components/ui/card';
-import { Wifi, Zap, Clock, MapPin, ArrowLeft, Bookmark, Navigation } from 'lucide-react';
+import { Wifi, Zap, Clock, MapPin, ArrowLeft, Bookmark, Navigation, MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
 import { publicAnonKey, projectId } from '../../../utils/supabase/info';
 import Cookies from 'js-cookie';
@@ -239,17 +239,42 @@ export const SpotDetailPage: React.FC = () => {
               </CardContent>
             </Card>
 
-            {user && (
+            {user ? (
+              <>
+                <Card>
+                  <CardContent className="pt-6">
+                    <Button
+                      onClick={() => navigate(`/spot/${spotId}/review`)}
+                      className="w-full"
+                    >
+                      <MessageSquare className="w-4 h-4 mr-2" />
+                      Write a Review
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="pt-6">
+                    <Button
+                      onClick={handleAddToHistory}
+                      disabled={addingToHistory}
+                      className="w-full"
+                      variant="outline"
+                    >
+                      <Bookmark className="w-4 h-4 mr-2" />
+                      {addingToHistory ? 'Adding...' : 'Add to My History'}
+                    </Button>
+                  </CardContent>
+                </Card>
+              </>
+            ) : (
               <Card>
                 <CardContent className="pt-6">
                   <Button
-                    onClick={handleAddToHistory}
-                    disabled={addingToHistory}
+                    onClick={() => navigate(`/login?redirect=/spot/${spotId}`)}
                     className="w-full"
-                    variant="outline"
                   >
-                    <Bookmark className="w-4 h-4 mr-2" />
-                    {addingToHistory ? 'Adding...' : 'Add to My History'}
+                    Sign in to Review
                   </Button>
                 </CardContent>
               </Card>

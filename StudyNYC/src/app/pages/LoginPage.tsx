@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router';
+import { useNavigate, Link, useSearchParams } from 'react-router';
 import { useAuth } from '../contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
@@ -11,6 +11,7 @@ import { BookOpen, User as UserIcon, Lock } from 'lucide-react';
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const { signIn } = useAuth();
+  const [searchParams] = useSearchParams();
   
   // Changed state from 'email' to 'username' to match Rust backend
   const [username, setUsername] = useState('');
@@ -30,7 +31,9 @@ export const LoginPage: React.FC = () => {
       // Calling the updated signIn that hits our Actix server
       await signIn(username, password);
       toast.success('Logged in successfully!');
-      navigate('/');
+      // Check if there's a redirect parameter
+      const redirect = searchParams.get('redirect') || '/';
+      navigate(redirect);
     } catch (error: any) {
       console.error('Login error:', error);
       // Friendly error message if the Rust server is down or password is wrong

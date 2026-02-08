@@ -7,7 +7,6 @@ import { Textarea } from './ui/textarea';
 import { Star } from 'lucide-react';
 import { toast } from 'sonner';
 import { publicAnonKey, projectId } from '../../../utils/supabase/info';
-import Cookies from 'js-cookie';
 
 interface ReviewSectionProps {
   spot: StudySpot;
@@ -63,16 +62,20 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({ spot }) => {
 
     setSubmitting(true);
     try {
-      const authToken = Cookies.get('auth_token');
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-386acec3/spots/${spot.key}/reviews`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${authToken}`,
+            'Authorization': `Bearer ${publicAnonKey}`,
           },
-          body: JSON.stringify({ rating, comment }),
+          body: JSON.stringify({ 
+            rating, 
+            comment,
+            userName: user?.name || 'User',
+            userId: user?.id || 'anonymous',
+          }),
         }
       );
 

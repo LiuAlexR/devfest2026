@@ -23,7 +23,7 @@ export const HomePage: React.FC = () => {
   const [reviewData, setReviewData] = useState<Record<string, { avg: number; count: number }>>({});
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
   const [locationLoading, setLocationLoading] = useState(false);
-  const [sortBy, setSortBy] = useState<'none' | 'distance' | 'rating'>('none');
+  const [sortBy, setSortBy] = useState<'none' | 'distance' | 'rating'>('distance');
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
