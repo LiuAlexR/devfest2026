@@ -99,7 +99,7 @@ export const HomePage: React.FC = () => {
     }
   }, [page]);
 
-  // Infinite scroll observer
+  // Infinite scroll observer (works for all sorts including distance)
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -129,6 +129,10 @@ export const HomePage: React.FC = () => {
     const location = await requestUserLocation();
     if (location) {
       setUserLocation(location);
+      // Reset page and spots to ensure we re-fetch with new location
+      setPage(1);
+      setSpots([]);
+      console.log('Location enabled:', location);
     } else {
       alert('Unable to get your location. Please enable location services in your browser.');
     }
@@ -164,10 +168,10 @@ export const HomePage: React.FC = () => {
     
     const params = new URLSearchParams({
       page: currentPage.toString(),
-      limit: '20', 
+      limit: sortBy === 'distance' ? '100' : '20', // 100 for distance, 20 for others
       search: debouncedSearch,
       category: filterCategory,
-      sortBy: sortBy,
+      sortBy: sortBy, // Server handles 'none', 'rating', and 'distance'
     });
     
     const url = `https://${projectId}.supabase.co/functions/v1/make-server-386acec3/spots?${params.toString()}`;
@@ -193,11 +197,57 @@ export const HomePage: React.FC = () => {
     console.log('Parsed response data:', data);
     
     if (response.ok) {
-      // We just set the spots. The ratings are ALREADY inside data.spots!
-      setSpots((prev) => reset ? data.spots : [...prev, ...data.spots]);
+      let spotsToSet = data.spots || [];
+      console.log('Fetched spots:', spotsToSet.length, 'spots, sortBy:', sortBy, 'userLocation:', userLocation);
+      
+      // Client-side sorting for distance - insert batch in correct sequence
+      if (sortBy === 'distance') {
+        if (!userLocation) {
+          console.warn('Distance sort selected but no user location available');
+          setSpots(reset ? spotsToSet : [...spots, ...spotsToSet]);
+        } else {
+          if (reset) {
+            // First batch: sort by distance
+            const sorted = [...spotsToSet].sort((a, b) => {
+              const distA = calculateDistance(userLocation.latitude, userLocation.longitude, a.latitude, a.longitude);
+              const distB = calculateDistance(userLocation.latitude, userLocation.longitude, b.latitude, b.longitude);
+              return distA - distB;
+            });
+            console.log('Sorted initial', sorted.length, 'spots by distance');
+            setSpots(sorted);
+          } else {
+            // Subsequent batches: insert in correct sorted position
+            setSpots((prevSpots) => {
+              const merged = [...prevSpots];
+              
+              spotsToSet.forEach((newSpot) => {
+                const newDist = calculateDistance(userLocation.latitude, userLocation.longitude, newSpot.latitude, newSpot.longitude);
+                
+                // Find correct insertion position
+                let insertIndex = merged.length;
+                for (let i = 0; i < merged.length; i++) {
+                  const existingDist = calculateDistance(userLocation.latitude, userLocation.longitude, merged[i].latitude, merged[i].longitude);
+                  if (newDist < existingDist) {
+                    insertIndex = i;
+                    break;
+                  }
+                }
+                
+                merged.splice(insertIndex, 0, newSpot);
+              });
+              
+              console.log('Inserted', spotsToSet.length, 'spots in correct distance sequence, total now:', merged.length);
+              return merged;
+            });
+          }
+        }
+      } else {
+        // For other sorts (rating, default), use pagination
+        setSpots((prev) => reset ? spotsToSet : [...prev, ...spotsToSet]);
+      }
       setTotal(data.total || 0);
       setTotalPages(data.totalPages || 1);
-      console.log('Spots set:', data.spots?.length || 0, 'spots');
+      console.log('Spots set:', spotsToSet?.length || 0, 'spots');
     } else {
       console.error('Spots fetch failed:', data.error || data);
     }
@@ -318,12 +368,16 @@ export const HomePage: React.FC = () => {
   </SelectContent>
 </Select>
 
-            <Select value={sortBy} onValueChange={(value) => setSortBy(value as 'none' | 'distance' | 'rating')}>
+            <Select value={sortBy} onValueChange={(value) => {
+              setSortBy(value as 'none' | 'distance' | 'rating');
+              setPage(1);      // Reset to first page when changing sort
+              setSpots([]);    // Clear current results
+            }}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Sort by" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Default Order</SelectItem>
+                <SelectItem value="none">Alphabetical (A to Z)</SelectItem>
                 <SelectItem value="distance" disabled={!userLocation}>
                   {userLocation ? 'Distance (Nearest)' : 'Distance (Enable location)'}
                 </SelectItem>

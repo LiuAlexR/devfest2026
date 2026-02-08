@@ -57,14 +57,18 @@ app.get("/make-server-386acec3/spots", async (c: any) => {
 
     // 3. DATABASE SIDE SORTING
     if (sortBy === 'rating') {
-      query = query.order('avg_rating', { ascending: false });
+      query = query.order('avg_rating', { ascending: false }).order('review_count', { ascending: false });
+    } else if (sortBy === 'distance') {
+      // For distance sort, return all spots without pagination (client will sort by distance)
+      query = query.order('name', { ascending: true });
     } else {
       query = query.order('name', { ascending: true });
     }
 
     // 4. PAGINATION
-    const from = (page - 1) * limit;
-    const to = from + limit - 1;
+    const pageLimit = sortBy === 'distance' ? 100 : limit; // Use 100 for distance, 20 for others
+    const from = (page - 1) * pageLimit;
+    const to = from + pageLimit - 1;
     const { data, count, error } = await query.range(from, to);
 
     if (error) throw error;
