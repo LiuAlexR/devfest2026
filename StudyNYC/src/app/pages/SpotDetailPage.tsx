@@ -6,9 +6,10 @@ import { ReviewSection } from '../components/ReviewSection';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Card, CardContent } from '../components/ui/card';
-import { Wifi, Zap, Clock, MapPin, ArrowLeft, Bookmark, Navigation } from 'lucide-react';
+import { Wifi, Zap, MapPin, ArrowLeft, Bookmark, Navigation } from 'lucide-react';
 import { toast } from 'sonner';
-import { publicAnonKey, projectId } from '/utils/supabase/info';
+import { publicAnonKey, projectId } from '../../../utils/supabase/info';
+import Cookies from 'js-cookie';
 import { ImageWithFallback } from '../components/figma/ImageWithFallback';
 import { getUserLocation, calculateDistance, Coordinates } from '../utils/locationUtils';
 
@@ -21,7 +22,7 @@ const spotImages: Record<string, string> = {
 export const SpotDetailPage: React.FC = () => {
   const { spotId } = useParams<{ spotId: string }>();
   const navigate = useNavigate();
-  const { user, accessToken } = useAuth();
+  const { user } = useAuth();
   const [spot, setSpot] = useState<StudySpot | null>(null);
   const [loading, setLoading] = useState(true);
   const [addingToHistory, setAddingToHistory] = useState(false);
@@ -42,45 +43,59 @@ export const SpotDetailPage: React.FC = () => {
   };
 
   const fetchSpot = async () => {
-    try {
-      const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-386acec3/spots`,
-        {
-          headers: {
-            'Authorization': `Bearer ${publicAnonKey}`,
-          },
-        }
-      );
-
-      const data = await response.json();
-      if (response.ok) {
-        const foundSpot = (data.spots || []).find((s: StudySpot) => s.id === spotId);
-        setSpot(foundSpot || null);
-      } else {
-        console.error('Failed to fetch spot:', data.error);
+  try {
+    setLoading(true);
+    console.log('Fetching spot with ID:', spotId);
+    // 1. Point directly to the individual spot endpoint using the ID from the URL
+    const response = await fetch(
+      `https://${projectId}.supabase.co/functions/v1/make-server-386acec3/spots/${spotId}`,
+      {
+        headers: {
+          'Authorization': `Bearer ${publicAnonKey}`,
+        },
       }
-    } catch (error) {
-      console.error('Error fetching spot:', error);
-    } finally {
-      setLoading(false);
+    );
+
+    console.log('Spot fetch response status:', response.status);
+    const data = await response.json();
+    console.log('Spot fetch data:', data);
+    console.log('Response ok?', response.ok);
+
+    if (response.ok) {
+      // 2. Data is now the spot object itself, not an array
+      setSpot(data);
+    } else {
+      const errorMsg = data?.error || data?.message || JSON.stringify(data) || 'Unknown error';
+      console.error('Fetch error details:', errorMsg);
+      toast.error(`Failed to load spot: ${errorMsg}`);
+      setSpot(null);
     }
-  };
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.error('Network error:', errorMsg);
+    toast.error(`Network error: ${errorMsg}`);
+    setSpot(null);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleAddToHistory = async () => {
-    if (!user || !accessToken || !spotId) {
+    if (!user || !spotId) {
       toast.error('Please log in to save to history');
       return;
     }
 
     setAddingToHistory(true);
     try {
+      const authToken = Cookies.get('auth_token');
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-386acec3/user/history`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`,
+            'Authorization': `Bearer ${authToken}`,
           },
           body: JSON.stringify({ spotId }),
         }
@@ -119,7 +134,7 @@ export const SpotDetailPage: React.FC = () => {
     );
   }
 
-  const imageUrl = spotImages[spot.id] || 'https://images.unsplash.com/photo-1544822688-c5f41d2c1972?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080';
+  const imageUrl = spotImages[spot.key] || 'https://images.unsplash.com/photo-1544822688-c5f41d2c1972?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080';
   const distance = (userLocation && spot.latitude && spot.longitude) 
     ? calculateDistance(userLocation.latitude, userLocation.longitude, spot.latitude, spot.longitude) 
     : null;
@@ -159,7 +174,7 @@ export const SpotDetailPage: React.FC = () => {
           <h1 className="text-4xl md:text-5xl font-bold mb-2">{spot.name}</h1>
           <div className="flex items-center gap-2 text-white/90">
             <MapPin className="w-4 h-4" />
-            <span>{spot.address}</span>
+            <span>{spot.neighborhood}, New York</span>
           </div>
         </div>
       </div>
@@ -192,9 +207,9 @@ export const SpotDetailPage: React.FC = () => {
                   </div>
 
                   <div>
-                    <h3 className="font-semibold mb-2">Environment</h3>
+                    <h3 className="font-semibold mb-2">Rating</h3>
                     <div className="flex items-center gap-2 mb-4">
-                      <Badge>{spot.noise} Noise Level</Badge>
+                      <Badge>{spot.avg_rating.toFixed(1)} ★ ({spot.review_count} reviews)</Badge>
                     </div>
                   </div>
                 </div>
@@ -209,9 +224,9 @@ export const SpotDetailPage: React.FC = () => {
               <CardContent className="pt-6">
                 <h3 className="font-semibold mb-4 flex items-center gap-2">
                   <Clock className="w-4 h-4" />
-                  Hours
+                  Location
                 </h3>
-                <p className="text-sm text-gray-700">{spot.hours}</p>
+                <p className="text-sm text-gray-700">{spot.neighborhood}</p>
               </CardContent>
             </Card>
 

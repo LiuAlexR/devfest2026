@@ -5,7 +5,7 @@ import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import { Search, MapPin, Navigation, Loader2, Sparkles } from 'lucide-react';
-import { publicAnonKey, projectId } from '/utils/supabase/info';
+import { publicAnonKey, projectId } from '../../../utils/supabase/info';
 import { 
   getUserLocation, 
   requestUserLocation, 
@@ -170,19 +170,27 @@ export const HomePage: React.FC = () => {
       sortBy: sortBy,
     });
     
-    // ... (userLocation logic)
-
-    const response = await fetch(
-      `https://${projectId}.supabase.co/functions/v1/make-server-386acec3/spots?${params.toString()}`,
-      { headers: { 'Authorization': `Bearer ${publicAnonKey}` } }
-    );
-
+    const url = `https://${projectId}.supabase.co/functions/v1/make-server-386acec3/spots?${params.toString()}`;
+    console.log('Fetching from:', url);
+    
+    const response = await fetch(url, {
+      headers: {
+        'Authorization': `Bearer ${publicAnonKey}`,
+      },
+    });
+    console.log('Response status:', response.status);
+    
     const data = await response.json();
+    console.log('Response data:', data);
+    
     if (response.ok) {
       // We just set the spots. The ratings are ALREADY inside data.spots!
       setSpots((prev) => reset ? data.spots : [...prev, ...data.spots]);
       setTotal(data.total || 0);
       setTotalPages(data.totalPages || 1);
+      console.log('Spots set:', data.spots?.length || 0, 'spots');
+    } else {
+      console.error('Spots fetch failed:', data.error || data);
     }
   } catch (error) {
     console.error('Fetch error:', error);
@@ -335,7 +343,7 @@ export const HomePage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {spots.map((spot) => (
   <StudySpotCard
-    key={spot.id}
+    key={spot.key}
     spot={spot}
     // Pulling pre-calculated data from the spot object
     averageRating={spot.avg_rating || 0}

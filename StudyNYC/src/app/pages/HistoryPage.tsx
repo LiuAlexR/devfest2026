@@ -5,26 +5,27 @@ import { StudySpot } from '../types';
 import { StudySpotCard } from '../components/StudySpotCard';
 import { Button } from '../components/ui/button';
 import { History, ArrowLeft } from 'lucide-react';
-import { publicAnonKey, projectId } from '/utils/supabase/info';
+import { publicAnonKey, projectId } from '../../../utils/supabase/info';
 import { getUserLocation, calculateDistance, Coordinates } from '../utils/locationUtils';
+import Cookies from 'js-cookie';
 
 export const HistoryPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user, accessToken } = useAuth();
+  const { user } = useAuth();
   const [historySpots, setHistorySpots] = useState<StudySpot[]>([]);
   const [loading, setLoading] = useState(true);
   const [reviewData, setReviewData] = useState<Record<string, { avg: number; count: number }>>({});
   const [userLocation, setUserLocation] = useState<Coordinates | null>(null);
 
   useEffect(() => {
-    if (!user || !accessToken) {
+    if (!user) {
       navigate('/login');
       return;
     }
 
     fetchHistory();
     loadUserLocation();
-  }, [user, accessToken]);
+  }, [user, navigate]);
 
   const loadUserLocation = async () => {
     const location = await getUserLocation();
@@ -39,15 +40,16 @@ export const HistoryPage: React.FC = () => {
   };
 
   const fetchHistory = async () => {
-    if (!accessToken) return;
-
     try {
+      const authToken = Cookies.get('auth_token');
+      if (!authToken) return;
+      
       // Fetch user history
       const historyResponse = await fetch(
         `https://${projectId}.supabase.co/functions/v1/make-server-386acec3/user/history`,
         {
           headers: {
-            'Authorization': `Bearer ${accessToken}`,
+            'Authorization': `Bearer ${authToken}`,
           },
         }
       );
@@ -74,13 +76,13 @@ export const HistoryPage: React.FC = () => {
       const allSpots = spotsData.spots || [];
 
       // Filter spots that are in user history
-      const userSpots = allSpots.filter((spot: StudySpot) => spotIds.includes(spot.id));
+      const userSpots = allSpots.filter((spot: StudySpot) => spotIds.includes(spot.key));
       setHistorySpots(userSpots);
 
       // Fetch reviews for these spots
       const reviewPromises = userSpots.map(async (spot: StudySpot) => {
         const reviewResponse = await fetch(
-          `https://${projectId}.supabase.co/functions/v1/make-server-386acec3/spots/${spot.id}/reviews`,
+          `https://${projectId}.supabase.co/functions/v1/make-server-386acec3/spots/${spot.key}/reviews`,
           {
             headers: {
               'Authorization': `Bearer ${publicAnonKey}`,
@@ -92,7 +94,7 @@ export const HistoryPage: React.FC = () => {
         const avg = reviews.length > 0
           ? reviews.reduce((sum: number, r: any) => sum + r.rating, 0) / reviews.length
           : 0;
-        return { spotId: spot.id, avg, count: reviews.length };
+        return { spotId: spot.key, avg, count: reviews.length };
       });
 
       const reviewResults = await Promise.all(reviewPromises);
@@ -162,10 +164,10 @@ export const HistoryPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {historySpots.map((spot) => (
                 <StudySpotCard
-                  key={spot.id}
+                  key={spot.key}
                   spot={spot}
-                  averageRating={reviewData[spot.id]?.avg}
-                  reviewCount={reviewData[spot.id]?.count}
+                  averageRating={reviewData[spot.key]?.avg}
+                  reviewCount={reviewData[spot.key]?.count}
                   distance={getDistance(spot)}
                 />
               ))}

@@ -3,7 +3,7 @@ import { StudySpot } from '../types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { Wifi, Zap, Clock, MapPin, Star, Navigation } from 'lucide-react';
+import { Wifi, Zap, MapPin, Star, Navigation } from 'lucide-react';
 import { Link } from 'react-router';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 
@@ -21,7 +21,7 @@ const spotImages: Record<string, string> = {
 };
 
 export const StudySpotCard: React.FC<StudySpotCardProps> = ({ spot, averageRating, reviewCount, distance }) => {
-  const imageUrl = spotImages[spot.id] || 'https://images.unsplash.com/photo-1544822688-c5f41d2c1972?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080';
+  const imageUrl = spotImages[spot.key] || 'https://images.unsplash.com/photo-1544822688-c5f41d2c1972?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080';
 
   return (
     <Card className="overflow-hidden hover:shadow-lg transition-shadow">
@@ -50,7 +50,7 @@ export const StudySpotCard: React.FC<StudySpotCardProps> = ({ spot, averageRatin
         <CardTitle className="text-xl">{spot.name}</CardTitle>
         <CardDescription className="flex items-center gap-1 text-sm">
           <MapPin className="w-3 h-3" />
-          {spot.address}
+          {spot.neighborhood}
         </CardDescription>
         
         {averageRating !== undefined && reviewCount !== undefined && reviewCount > 0 && (
@@ -80,17 +80,12 @@ export const StudySpotCard: React.FC<StudySpotCardProps> = ({ spot, averageRatin
               Outlets
             </Badge>
           )}
-          <Badge variant="outline" className="flex items-center gap-1">
-            <Clock className="w-3 h-3" />
-            {spot.noise}
+          <Badge variant="outline" className="text-xs">
+            {spot.category}
           </Badge>
         </div>
         
-        <div className="text-xs text-gray-500 mb-4">
-          <strong>Hours:</strong> {spot.hours}
-        </div>
-        
-        <Link to={`/spot/${spot.id}`}>
+        <Link to={`/spot/${spot.key}`}>
           <Button className="w-full">View Details & Reviews</Button>
         </Link>
       </CardContent>

@@ -1,13 +1,12 @@
 export interface StudySpot {
-  id: string;
+  key: string;
   name: string;
-  type: 'libraries' | 'cafes' | 'restaurants' | 'parks' | 'co-working';
-  address: string;
+  category: 'libraries' | 'cafes' | 'restaurants' | 'parks' | 'coworking';
   neighborhood: string;
   wifi: boolean;
   outlets: boolean;
-  hours: string;
-  noise: 'Quiet' | 'Moderate' | 'Loud';
+  avg_rating: number;
+  review_count: number;
   latitude: number;
   longitude: number;
   description?: string;

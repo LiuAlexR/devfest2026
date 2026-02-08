@@ -1,0 +1,11 @@
+{
+  "imports": {
+    "npm:hono": "https://deno.land/x/hono@v3.11.7/mod.ts",
+    "npm:hono/cors": "https://deno.land/x/hono@v3.11.7/middleware/cors/index.ts",
+    "npm:hono/logger": "https://deno.land/x/hono@v3.11.7/middleware/logger/index.ts",
+    "npm:@supabase/supabase-js@2": "https://esm.sh/@supabase/supabase-js@2.38.1"
+  },
+  "compilerOptions": {
+    "lib": ["deno.window"]
+  }
+}

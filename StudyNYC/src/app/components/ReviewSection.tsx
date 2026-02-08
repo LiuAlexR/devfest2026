@@ -6,14 +6,15 @@ import { Button } from './ui/button';
 import { Textarea } from './ui/textarea';
 import { Star } from 'lucide-react';
 import { toast } from 'sonner';
-import { publicAnonKey, projectId } from '/utils/supabase/info';
+import { publicAnonKey, projectId } from '../../../utils/supabase/info';
+import Cookies from 'js-cookie';
 
 interface ReviewSectionProps {
   spot: StudySpot;
 }
 
 export const ReviewSection: React.FC<ReviewSectionProps> = ({ spot }) => {
-  const { user, accessToken } = useAuth();
+  const { user } = useAuth();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -23,12 +24,12 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({ spot }) => {
 
   useEffect(() => {
     fetchReviews();
-  }, [spot.id]);
+  }, [spot.key]);
 
   const fetchReviews = async () => {
     try {
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-386acec3/spots/${spot.id}/reviews`,
+        `https://${projectId}.supabase.co/functions/v1/make-server-386acec3/spots/${spot.key}/reviews`,
         {
           headers: {
             'Authorization': `Bearer ${publicAnonKey}`,
@@ -50,7 +51,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({ spot }) => {
   };
 
   const handleSubmitReview = async () => {
-    if (!user || !accessToken) {
+    if (!user) {
       toast.error('Please log in to submit a review');
       return;
     }
@@ -62,13 +63,14 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({ spot }) => {
 
     setSubmitting(true);
     try {
+      const authToken = Cookies.get('auth_token');
       const response = await fetch(
-        `https://${projectId}.supabase.co/functions/v1/make-server-386acec3/spots/${spot.id}/reviews`,
+        `https://${projectId}.supabase.co/functions/v1/make-server-386acec3/spots/${spot.key}/reviews`,
         {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`,
+            'Authorization': `Bearer ${authToken}`,
           },
           body: JSON.stringify({ rating, comment }),
         }
