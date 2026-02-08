@@ -14,43 +14,64 @@ interface StudySpotCardProps {
   distance?: number | null;
 }
 
-const spotImages: Record<string, string> = {
-  'spot:1': 'https://images.unsplash.com/photo-1661951934175-61dbbb20406e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxuZXclMjB5b3JrJTIwcHVibGljJTIwbGlicmFyeSUyMGludGVyaW9yfGVufDF8fHx8MTc3MDUwNjA5Mnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
-  'spot:2': 'https://images.unsplash.com/photo-1755275402110-9e8eb8592814?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxjb3p5JTIwY29mZmVlJTIwc2hvcCUyMHN0dWR5fGVufDF8fHx8MTc3MDUwNjA5Mnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
-  'spot:3': 'https://images.unsplash.com/photo-1544822688-c5f41d2c1972?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxsaWJyYXJ5JTIwc3R1ZHklMjBkZXNrfGVufDF8fHx8MTc3MDUwNjA5Mnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral',
-};
-
 export const StudySpotCard: React.FC<StudySpotCardProps> = ({ spot, averageRating, reviewCount, distance }) => {
-  const imageUrl = spotImages[spot.key] || 'https://images.unsplash.com/photo-1544822688-c5f41d2c1972?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080';
+
+  // IMAGE SELECTION LOGIC (Purely Category-Based)
+  const getSpotImage = () => {
+    const cat = (spot.category || '').toLowerCase();
+
+    // 1. Park
+    if (cat.includes('park') || cat.includes('outdoor') || cat.includes('nature')) {
+      return 'https://images.unsplash.com/photo-1568515387631-8b650bbcdb90?q=80&w=2070&auto=format&fit=crop';
+    }
+
+    // 2. Library
+    if (cat.includes('library') || cat.includes('book') || cat.includes('quiet')) {
+      return 'https://images.unsplash.com/photo-1544822688-c5f41d2c1972?auto=format&fit=crop&w=800&q=80';
+    }
+
+    // 3. Cafe OR Restaurant
+    if (cat.includes('cafe') || cat.includes('coffee') || cat.includes('restaurant') || cat.includes('food')) {
+      return 'https://images.unsplash.com/photo-1755275402110-9e8eb8592814?auto=format&fit=crop&w=800&q=80';
+    }
+
+    // Default Fallback
+    return 'https://images.unsplash.com/photo-1544822688-c5f41d2c1972?auto=format&fit=crop&w=800&q=80';
+  };
+
+  const imageUrl = getSpotImage();
 
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-shadow">
+    <Card className="overflow-hidden hover:shadow-lg transition-shadow h-full flex flex-col">
       <div className="relative h-48 overflow-hidden">
         <ImageWithFallback 
           src={imageUrl}
           alt={spot.name}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
+        
+        {/* Category Badge */}
         <div className="absolute top-3 right-3">
-          <Badge variant="secondary" className="bg-white/90 backdrop-blur">
-            {spot.neighborhood}
+          <Badge variant="secondary" className="bg-white/90 backdrop-blur capitalize">
+            {spot.category || 'Spot'}
           </Badge>
         </div>
+
         {distance !== null && distance !== undefined && (
           <div className="absolute top-3 left-3">
             <Badge variant="default" className="bg-blue-600/90 backdrop-blur flex items-center gap-1">
               <Navigation className="w-3 h-3" />
-              {distance} mi
+              {typeof distance === 'number' ? distance.toFixed(1) : distance} mi
             </Badge>
           </div>
         )}
       </div>
       
       <CardHeader>
-        <CardTitle className="text-xl">{spot.name}</CardTitle>
+        <CardTitle className="text-xl line-clamp-1">{spot.name}</CardTitle>
         <CardDescription className="flex items-center gap-1 text-sm">
           <MapPin className="w-3 h-3" />
-          {spot.neighborhood}
+          {spot.neighborhood || 'Nearby'}
         </CardDescription>
         
         {averageRating !== undefined && reviewCount !== undefined && reviewCount > 0 && (
@@ -64,8 +85,8 @@ export const StudySpotCard: React.FC<StudySpotCardProps> = ({ spot, averageRatin
         )}
       </CardHeader>
       
-      <CardContent>
-        <p className="text-sm text-gray-600 mb-4">{spot.description}</p>
+      <CardContent className="flex flex-col flex-grow">
+        <p className="text-sm text-gray-600 mb-4 line-clamp-2 flex-grow">{spot.description}</p>
         
         <div className="flex flex-wrap gap-2 mb-4">
           {spot.wifi && (
@@ -80,12 +101,14 @@ export const StudySpotCard: React.FC<StudySpotCardProps> = ({ spot, averageRatin
               Outlets
             </Badge>
           )}
-          <Badge variant="outline" className="text-xs">
-            {spot.noise} Noise
-          </Badge>
+          {spot.noise && (
+            <Badge variant="outline" className="text-xs capitalize">
+              {spot.noise} Noise
+            </Badge>
+          )}
         </div>
         
-        <Link to={`/spot/${spot.key}`}>
+        <Link to={`/spot/${spot.key}`} className="mt-auto">
           <Button className="w-full">View Details & Reviews</Button>
         </Link>
       </CardContent>
