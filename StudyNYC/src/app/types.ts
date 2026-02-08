@@ -9,6 +9,7 @@ export interface StudySpot {
   review_count: number;
   latitude: number;
   longitude: number;
+  noise: 'Quiet' | 'Moderate' | 'Loud';
   description?: string;
 }
 

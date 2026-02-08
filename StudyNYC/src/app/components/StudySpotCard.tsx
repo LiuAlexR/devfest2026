@@ -81,7 +81,7 @@ export const StudySpotCard: React.FC<StudySpotCardProps> = ({ spot, averageRatin
             </Badge>
           )}
           <Badge variant="outline" className="text-xs">
-            {spot.category}
+            {spot.noise} Noise
           </Badge>
         </div>
         

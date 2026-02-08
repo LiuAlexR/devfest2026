@@ -101,6 +101,7 @@ app.post("/make-server-386acec3/init-spots", async (c: any) => {
           category: 'libraries',
           wifi: true,
           outlets: true,
+          noise: 'Quiet',
           latitude: 40.7532,
           longitude: -73.9822
         }
