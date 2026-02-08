@@ -16,7 +16,7 @@ interface StudySpotCardProps {
 
 export const StudySpotCard: React.FC<StudySpotCardProps> = ({ spot, averageRating, reviewCount, distance }) => {
 
-  // IMAGE SELECTION LOGIC (Purely Category-Based)
+  // IMAGE SELECTION LOGIC
   const getSpotImage = () => {
     const cat = (spot.category || '').toLowerCase();
 
@@ -69,11 +69,25 @@ export const StudySpotCard: React.FC<StudySpotCardProps> = ({ spot, averageRatin
       
       <CardHeader>
         <CardTitle className="text-xl line-clamp-1">{spot.name}</CardTitle>
-        <CardDescription className="flex items-center gap-1 text-sm">
-          <MapPin className="w-3 h-3" />
-          {spot.neighborhood || 'Nearby'}
-        </CardDescription>
         
+        {/* --- UPDATED: Address Section --- */}
+        <div className="flex flex-col gap-1">
+          {/* Primary Address Line */}
+          <CardDescription className="flex items-start gap-1 text-sm text-gray-700">
+            <MapPin className="w-3 h-3 mt-1 flex-shrink-0 text-gray-500" />
+            <span className="line-clamp-2">
+              {spot.address || spot.neighborhood || 'Address unavailable'}
+            </span>
+          </CardDescription>
+          
+          {/* Secondary Neighborhood Line (Optional - only if address is present and different) */}
+          {spot.address && spot.neighborhood && !spot.address.includes(spot.neighborhood) && (
+             <span className="text-xs text-gray-400 pl-4">
+               {spot.neighborhood}
+             </span>
+          )}
+        </div>
+
         {averageRating !== undefined && reviewCount !== undefined && reviewCount > 0 && (
           <div className="flex items-center gap-2 mt-2">
             <div className="flex items-center gap-1">
